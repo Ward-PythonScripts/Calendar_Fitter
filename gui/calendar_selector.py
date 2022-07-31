@@ -3,7 +3,7 @@ from tkinter import *
 import math
 
 
-class Calendar_selector():
+class Calendar_selector:
     def __init__(self, amount_of_minutes_in_between: int):
         self.amount_of_minutes_in_between = amount_of_minutes_in_between
         self.master = Tk()
@@ -41,11 +41,13 @@ def minutes_to_hour_string(minutes: int) -> str:
     minutes = minutes - hours * 60
     return pad_time(str(hours)) + ":" + pad_time(str(minutes))
 
-def pad_time(original_time:str) -> str:
+
+def pad_time(original_time: str) -> str:
     if len(original_time) != 2:
         return "0" + original_time
     else:
         return original_time
+
 
 def begin_and_end_to_string(begin_time: int, end_time: int) -> str:
     s1 = minutes_to_hour_string(begin_time)
@@ -63,7 +65,7 @@ class MyDayLabel:
     def __init__(self, day: int, master):
         days = ["Mon", "Tue", "Wen", "Thu", "Fri", "Sat", "Sun"]
         label = tkinter.Label(text=days[day], master=master, justify="center")
-        label.grid(row=0, column=day+1)
+        label.grid(row=0, column=day + 1)
 
 
 class MyBox:
@@ -77,10 +79,18 @@ class MyBox:
         self.label = self.create_Label()
 
     def create_Label(self):
-        label = tkinter.Label(self.master, fg="green", height="2", width="4", text="      ",borderwidth=5,relief="ridge",
+        label = tkinter.Label(self.master, fg="green", height="2", width="4", text="      ", borderwidth=5,
+                              relief="ridge",
                               background="white")
         label.grid(row=self.row_pos, column=self.col_pos)
+        label.bind("<ButtonRelease-1>", lambda event,first_clicked_label=self: mouseReleasedOnLabel(event,
+                                                                            first_clicked_label=first_clicked_label))
         return label
 
-    def button_clicked(self):
-        pass
+
+def mouseReleasedOnLabel(event: Event, first_clicked_label: MyBox):
+    # sadly we will have to find the label itself
+    # since the ButtonRelease-1 is already filled in when the mouse is pressed
+    print("Was pressed on row ", first_clicked_label.day)
+    #press the mouse again, and use that event to grab the second label.
+

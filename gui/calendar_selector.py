@@ -3,27 +3,50 @@ from tkinter import *
 import math
 import pyautogui
 import time
+from gui.person_manager import *
 
 
 class Calendar_selector:
     def __init__(self, amount_of_minutes_in_between: int):
+        self.person_manager = Person_Manager()
         self.amount_of_minutes_in_between = amount_of_minutes_in_between
         self.master = Tk()
         self.master.title("Use the left mouse button to select and use the right mouse button to deselect")
+        self.calendar_frame = Frame(master=self.master)
+        self.calendar_frame.pack(side=LEFT)
         self.main_window = self.get_window()
         self.create_window_content()
-        self.add_person_selector()
+        self.person_selector_frame = self.add_person_selector()
         self.main_window.pack()
         mainloop()
 
     def get_window(self):
         canvas_height = 600
         canvas_width = 900
-        w = Canvas(self.master, width=canvas_width, height=canvas_height, background='gray75')
+        w = Canvas(self.calendar_frame, width=canvas_width, height=canvas_height, background='gray75')
         return w
 
-    def add_person_selector(self):
-        pass
+    def add_person_selector(self) -> Frame:
+        starting_row_pos = 3
+        options_frame = Frame(master=self.master)
+        options_frame.pack(side=RIGHT)
+        label = Label(master=options_frame, text="participants")
+        label.grid(row=starting_row_pos, column=0)
+        starting_row_pos += 1
+        # add new person button for each person in the person manager
+        for name in self.person_manager.get_person_names():
+            Button(master=options_frame, text=name).grid(row=starting_row_pos, column=0)
+            starting_row_pos += 1
+        add_person_button = Button(master=options_frame,
+                                   text="Add participant",
+                                   command=lambda: EnterNameWindow(options_frame,
+                                                                   self.person_manager, self.refresh_person_selector))
+        add_person_button.grid(row=starting_row_pos, column=0)
+        return options_frame
+
+    def refresh_person_selector(self):
+        self.person_selector_frame.destroy()
+        self.person_selector_frame = self.add_person_selector()
 
     def create_window_content(self):
         global day_labels
@@ -66,6 +89,24 @@ def begin_and_end_to_string(begin_time: int, end_time: int) -> str:
     return s1 + " - " + s2
 
 
+class EnterNameWindow(object):
+    def __init__(self, master, pm: Person_Manager, cb):
+        self.person_manager = pm
+        top = self.top = Toplevel(master)
+        self.lab = Label(top, text="Enter the name of the participant")
+        self.lab.pack()
+        self.e = Entry(top)
+        self.e.pack()
+        self.b = Button(top, text='Add', command=self.cleanup)
+        self.b.pack()
+        self.cb = cb
+
+    def cleanup(self):
+        self.person_manager.add_Person(self.e.get())
+        self.top.destroy()
+        self.cb()
+
+
 class MyIntervalLabel:
     def __init__(self, begin_time: int, end_time: int, master, row_pos):
         label = tkinter.Label(text=(begin_and_end_to_string(begin_time, end_time)), master=master, justify="center")
@@ -96,9 +137,9 @@ class MyBox:
                               background="white")
         label.grid(row=self.row_pos, column=self.col_pos)
         label.bind("<ButtonRelease-1>",
-                   lambda event, first_clicked_label=self: leftMouseReleasedOnLabel(event,first_clicked_label))
+                   lambda event, first_clicked_label=self: leftMouseReleasedOnLabel(event, first_clicked_label))
         label.bind("<ButtonRelease-3>",
-                   lambda event,label_clicked=self: rightMouseReleasedOnLabel(event,label_clicked))
+                   lambda event, label_clicked=self: rightMouseReleasedOnLabel(event, label_clicked))
         return label
 
     def label_selected(self, targeted: bool):
@@ -127,7 +168,7 @@ def mouseReleasedOnLabel(event: Event, first_clicked_label: MyBox, selected: boo
     # sadly we will have to find the label itself
     # since the ButtonRelease-1 is already filled in when the mouse is pressed, and doesn't return the label on which
     # was released
-    was_first = mouse_event_handler.add_event(first_clicked_label,selected)
+    was_first = mouse_event_handler.add_event(first_clicked_label, selected)
     # press the mouse again, and use that event to grab the second label. But we need to make sure we click the right
     # mouse button of course
     if was_first:
@@ -136,7 +177,6 @@ def mouseReleasedOnLabel(event: Event, first_clicked_label: MyBox, selected: boo
             left_click_again_to_get_release()
         else:
             right_click_again_to_get_release()
-
 
 
 def make_ascending(a1: int, b1: int) -> tuple[int, int]:
@@ -148,7 +188,7 @@ def make_ascending(a1: int, b1: int) -> tuple[int, int]:
     return a1, b1
 
 
-def complete_selection(start_label: MyBox, end_label: MyBox,selected:bool):
+def complete_selection(start_label: MyBox, end_label: MyBox, selected: bool):
     # get the enclosed labels in between these two and trigger them as well, indexes in the MyBox object are starting
     # at 1
     x1 = start_label.row_pos - 1
@@ -171,20 +211,22 @@ def left_click_again_to_get_release():
     time.sleep(0.004)
     pyautogui.mouseUp()
 
+
 def right_click_again_to_get_release():
     pyautogui.mouseDown(button="right")
     # sleep as a safeguard to make sure the click gets registered
     time.sleep(0.004)
     pyautogui.mouseUp(button="right")
 
+
 class Mouse_Event_Handler:
     def __init__(self):
         self.first: bool = True
         self.First_Label: MyBox = None
         self.Second_Label: MyBox = None
-        self.selected:bool = False
+        self.selected: bool = False
 
-    def add_event(self, label: MyBox,selected:bool) -> bool:
+    def add_event(self, label: MyBox, selected: bool) -> bool:
         self.selected = selected
         if self.first:
             self.first = False
@@ -196,7 +238,7 @@ class Mouse_Event_Handler:
             return False
 
     def mouse_event_complete(self):
-        complete_selection(self.First_Label, self.Second_Label,self.selected)
+        complete_selection(self.First_Label, self.Second_Label, self.selected)
         self.First_Label = None
         self.Second_Label = None
         self.first = True

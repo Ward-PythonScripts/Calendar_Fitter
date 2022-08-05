@@ -40,7 +40,11 @@ class Calendar_selector:
         starting_row_pos += 1
         # add new person button for each person in the person manager
         for name in self.person_manager.get_person_names():
-            Button(master=options_frame, text=name).grid(row=starting_row_pos, column=0)
+            b = Button(master=options_frame,
+                   text=name,
+                   command=lambda person=self.person_manager.activePerson,
+                                  cur_button=b:self.person_button_clicked(person,cur_button)).\
+                grid(row=starting_row_pos, column=0)
             starting_row_pos += 1
         add_person_button = Button(master=options_frame,
                                    text="Add participant",
@@ -48,6 +52,13 @@ class Calendar_selector:
                                                                    self.person_manager, self.refresh_person_selector))
         add_person_button.grid(row=starting_row_pos, column=0)
         return options_frame
+
+    def person_button_clicked(self,person:Person,button_pressed:Button):
+        global day_labels
+        button_pressed.configure(background="green")
+        day_labels = self.person_manager.load
+
+
 
     def refresh_person_selector(self):
         self.person_selector_frame.destroy()
@@ -81,6 +92,9 @@ class Calendar_selector:
             MyIntervalLabel(begin_time=temp_time - self.amount_of_minutes_in_between, end_time=temp_time,
                             master=main_window, row_pos=x + 1)
         return temp_time
+
+    def save_current_persons_schedule(self):
+        self.person_manager.save_persons_bookings(day_labels)
 
 
 def minutes_to_hour_string(minutes: int) -> str:
@@ -142,7 +156,7 @@ class MyBox:
         self.row_pos = row_pos
         self.col_pos = col_pos
         self.label = self.create_Label()
-        self.selected: bool = False
+        self.priority = 0
 
     def create_Label(self):
         label = tkinter.Label(self.master, fg="green", height="1", width="4", text="      ", borderwidth=5,
@@ -155,17 +169,23 @@ class MyBox:
                    lambda event, label_clicked=self: rightMouseReleasedOnLabel(event, label_clicked))
         return label
 
-    def label_selected(self, targeted: bool):
-        if self.selected != targeted:
+    def label_selected(self, priority: int):
+        if self.priority != priority:
             # something changed
-            self.change_color(targeted)
-            self.selected = targeted
+            self.change_color(priority)
+            self.priority = priority
 
-    def change_color(self, targeted: bool):
-        if targeted:
-            self.label.configure(background="green")
-        else:
+    def change_color(self, priority: int):
+        if priority == 0:
             self.label.configure(background="white")
+        elif priority == 1:
+            self.label.configure(background="green")
+        elif priority == 2:
+            self.label.configure(background="orange")
+        elif priority == 3:
+            self.label.configure(background="red")
+        else:
+            self.label.configure(background="pink")
 
 
 def leftMouseReleasedOnLabel(event: Event, label: MyBox):

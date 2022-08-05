@@ -4,6 +4,7 @@ import math
 import pyautogui
 import time
 from gui.person_manager import *
+from gui.dates_container import *
 
 
 class Calendar_selector:
@@ -14,11 +15,15 @@ class Calendar_selector:
         self.master.title("Use the left mouse button to select and use the right mouse button to deselect")
         self.calendar_frame = Frame(master=self.master)
         self.calendar_frame.pack(side=LEFT)
-        self.main_window = self.get_window()
-        self.create_window_content()
+        self.main_window:tkinter.Canvas = self.create_hours_selection_widget()
         self.person_selector_frame = self.add_person_selector()
-        self.main_window.pack()
         mainloop()
+
+    def create_hours_selection_widget(self) -> tkinter.Canvas:
+        main_window = self.get_window()
+        self.create_window_content(main_window)
+        main_window.pack()
+        return main_window
 
     def get_window(self):
         canvas_height = 600
@@ -48,26 +53,34 @@ class Calendar_selector:
         self.person_selector_frame.destroy()
         self.person_selector_frame = self.add_person_selector()
 
-    def create_window_content(self):
+    def create_window_content(self,main_window:tkinter.Canvas):
+        self.add_interval_labels(main_window)
+        self.add_selector_labels(main_window)
+
+    def add_selector_labels(self,main_window:tkinter.Canvas):
         global day_labels
+        temp_time = 0
+        for day in range(0, 7):
+            row_of_labels = []
+            # first create the day header
+            MyDayLabel(master=main_window, day=day)
+            for x in range(math.floor((24 * 60) / self.amount_of_minutes_in_between)):
+                # then create the day label itself
+                temp_time += self.amount_of_minutes_in_between
+                row_of_labels.append(
+                    MyBox(day, start_time=temp_time - self.amount_of_minutes_in_between, end_time=temp_time,
+                          master=main_window, row_pos=x + 1, col_pos=day + 1))
+            day_labels.append(row_of_labels)
+
+    def add_interval_labels(self,main_window:tkinter.Canvas):
         temp_time = 0
         # first the interval labels will be generated
         for x in range(math.floor((24 * 60) / self.amount_of_minutes_in_between)):
             # then create the day label itself
             temp_time += self.amount_of_minutes_in_between
             MyIntervalLabel(begin_time=temp_time - self.amount_of_minutes_in_between, end_time=temp_time,
-                            master=self.main_window, row_pos=x + 1)
-        for day in range(0, 7):
-            row_of_labels = []
-            # first create the day header
-            MyDayLabel(master=self.main_window, day=day)
-            for x in range(math.floor((24 * 60) / self.amount_of_minutes_in_between)):
-                # then create the day label itself
-                temp_time += self.amount_of_minutes_in_between
-                row_of_labels.append(
-                    MyBox(day, start_time=temp_time - self.amount_of_minutes_in_between, end_time=temp_time,
-                          master=self.main_window, row_pos=x + 1, col_pos=day + 1))
-            day_labels.append(row_of_labels)
+                            master=main_window, row_pos=x + 1)
+        return temp_time
 
 
 def minutes_to_hour_string(minutes: int) -> str:
@@ -102,7 +115,7 @@ class EnterNameWindow(object):
         self.cb = cb
 
     def cleanup(self):
-        self.person_manager.add_Person(self.e.get())
+        self.person_manager.add_Person(self.e.get(),set_active=True)
         self.top.destroy()
         self.cb()
 

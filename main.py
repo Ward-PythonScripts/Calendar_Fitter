@@ -1,5 +1,4 @@
-from solver import son_of_anton
-from gui import calendar_selector
+from gui.calendar_selector import Calendar_selector
 
-calendar_selector.Calendar_selector(60)
+Calendar_selector(60)
 

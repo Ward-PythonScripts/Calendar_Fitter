@@ -1,10 +1,142 @@
+import math
+import time
 import tkinter
 from tkinter import *
-import math
+
 import pyautogui
-import time
-from gui.person_manager import *
+
 from gui.dates_container import *
+from ErrorHandler.SmashAndDash import SmashAndDash
+
+
+
+class MyBox:
+    def __init__(self, day: int, start_time: int, end_time: int, master, row_pos: int, col_pos: int):
+        self.day = day
+        self.start_time = start_time
+        self.end_time = end_time
+        self.master = master
+        self.row_pos = row_pos
+        self.col_pos = col_pos
+        self.label = self.create_Label()
+        self.priority = 0
+
+    def create_Label(self):
+        label = tkinter.Label(self.master, fg="green", height="1", width="4", text="      ", borderwidth=5,
+                              relief="ridge",
+                              background="white")
+        label.grid(row=self.row_pos, column=self.col_pos)
+        label.bind("<ButtonRelease-1>",
+                   lambda event, first_clicked_label=self: leftMouseReleasedOnLabel(event, first_clicked_label))
+        label.bind("<ButtonRelease-3>",
+                   lambda event, label_clicked=self: rightMouseReleasedOnLabel(event, label_clicked))
+        return label
+
+    def label_selected(self, priority: int):
+        if self.priority != priority:
+            # something changed
+            self.change_color(priority)
+            self.priority = priority
+
+    def change_color(self, priority: int):
+        if priority == 0:
+            self.label.configure(background="white")
+        elif priority == 1:
+            self.label.configure(background="green")
+        elif priority == 2:
+            self.label.configure(background="orange")
+        elif priority == 3:
+            self.label.configure(background="red")
+        else:
+            self.label.configure(background="pink")
+
+class Person:
+    def __init__(self,name):
+        self.bookings:Dates_Container = Dates_Container()
+        self.name:str = name
+
+    def save_bookings(self,dates:Dates_Container):
+        self.bookings = dates
+
+    def save_bookings_from_labels(self,labels:list[list[MyBox]]):
+        self.bookings = Dates_Container()
+        for day in range(len(labels)):
+            begin_time = -1
+            begin_priority = -1
+            for interval in range(len(labels[day])):
+                #if begin time is -1, it isn't yet set and needs to be set by the next label
+                if begin_time == -1:
+                    begin_time = labels[day][interval].start_time
+                #same with the begin priority
+                if begin_priority == -1:
+                    begin_priority = labels[day][interval].priority
+                if labels[day][interval].priority != begin_priority:
+                    #end of planning event
+                    self.bookings.add_booking(Booking(start_time=begin_time,
+                                                      end_time=labels[day][interval].end_time,
+                                                      priority=begin_priority,
+                                                      day_of_the_week=day))
+                    #update parameters which we use to check the events
+                    begin_time = -1
+                    begin_priority = -1
+            #the last element will always be the end
+            self.bookings.add_booking(Booking(start_time=begin_time,
+                                              end_time=labels[day][len(labels[day])-1].end_time,
+                                              priority=begin_priority,
+                                              day_of_the_week=day))
+
+    def get_name(self) -> str:
+        return self.name
+
+    def get_bookings_as_labels(self) -> list[list[MyBox]]:
+        print("Still need to implement this my dog")
+
+
+class Person_Manager:
+    def __init__(self):
+        self.persons:list[Person] = []
+        self.activePerson:Person = None
+
+    def add_Person(self,person_name:str,set_active:bool):
+        new_p = Person(person_name)
+        self.persons.append(new_p)
+        if set_active:
+            self.activePerson = new_p
+
+    def get_person_names(self) -> list[str]:
+        name_lst:list[str] = []
+        for person in self.persons:
+            name_lst.append(person.get_name())
+        return name_lst
+
+    def set_person_active(self,person:Person):
+        self.activePerson = person
+
+    def set_person_active_name(self,person_name:str):
+        person = self.get_person_from_name(person_name)
+        self.activePerson = person
+
+    def get_person_from_name(self,person_name:str) -> Person:
+        for person in self.persons:
+            if person.get_name() == person_name:
+                return person
+
+    def save_persons_bookings(self,person,labels:list[list[MyBox]]):
+        if person is None:
+            person=self.activePerson
+        person.save_bookings_from_labels(labels)
+
+    def load_persons_bookings(self,person_par) -> list[list[MyBox]]:
+        #verify input
+        person = None
+        if type(person_par) == str:
+            person = self.get_person_from_name(person_par)
+        elif type(person_par) == Person:
+            person = person_par
+        else:
+            SmashAndDash("Didn't receive a Person or a str object")
+
+        #actual function
 
 
 class Calendar_selector:
@@ -97,6 +229,8 @@ class Calendar_selector:
         self.person_manager.save_persons_bookings(day_labels)
 
 
+
+
 def minutes_to_hour_string(minutes: int) -> str:
     hours = math.floor(minutes / 60)
     minutes = minutes - hours * 60
@@ -147,45 +281,6 @@ class MyDayLabel:
         label.grid(row=0, column=day + 1)
 
 
-class MyBox:
-    def __init__(self, day: int, start_time: int, end_time: int, master, row_pos: int, col_pos: int):
-        self.day = day
-        self.start_time = start_time
-        self.end_time = end_time
-        self.master = master
-        self.row_pos = row_pos
-        self.col_pos = col_pos
-        self.label = self.create_Label()
-        self.priority = 0
-
-    def create_Label(self):
-        label = tkinter.Label(self.master, fg="green", height="1", width="4", text="      ", borderwidth=5,
-                              relief="ridge",
-                              background="white")
-        label.grid(row=self.row_pos, column=self.col_pos)
-        label.bind("<ButtonRelease-1>",
-                   lambda event, first_clicked_label=self: leftMouseReleasedOnLabel(event, first_clicked_label))
-        label.bind("<ButtonRelease-3>",
-                   lambda event, label_clicked=self: rightMouseReleasedOnLabel(event, label_clicked))
-        return label
-
-    def label_selected(self, priority: int):
-        if self.priority != priority:
-            # something changed
-            self.change_color(priority)
-            self.priority = priority
-
-    def change_color(self, priority: int):
-        if priority == 0:
-            self.label.configure(background="white")
-        elif priority == 1:
-            self.label.configure(background="green")
-        elif priority == 2:
-            self.label.configure(background="orange")
-        elif priority == 3:
-            self.label.configure(background="red")
-        else:
-            self.label.configure(background="pink")
 
 
 def leftMouseReleasedOnLabel(event: Event, label: MyBox):
@@ -275,6 +370,11 @@ class Mouse_Event_Handler:
         self.First_Label = None
         self.Second_Label = None
         self.first = True
+
+
+
+
+
 
 
 ###Globals

@@ -1,3 +1,4 @@
+
 class Booking:
     def __init__(self,start_time:int,end_time:int,priority:int,day_of_the_week:int):
         #for now booked = priority 1
